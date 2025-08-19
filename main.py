@@ -1,10 +1,4 @@
-import requests, os
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-
-# send a test message when bot starts
-requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage?chat_id={CHAT_ID}&text=✅ Bot is alive and running!")import os, time, json, re, hashlib, requests
+import os, time, json, re, hashlib, requests
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -20,7 +14,11 @@ def now_iso():
 
 def send_telegram(text: str):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    r = requests.post(url, json={"chat_id": CHAT_ID, "text": text, "disable_web_page_preview": True}, timeout=25)
+    r = requests.post(
+        url,
+        json={"chat_id": CHAT_ID, "text": text, "disable_web_page_preview": True},
+        timeout=25
+    )
     r.raise_for_status()
 
 def load_seen():
@@ -35,7 +33,9 @@ def save_seen(s):
     CACHE_FILE.write_text(json.dumps(list(s)))
 
 def mk_id(*parts):
-    return hashlib.sha256("||".join(map(lambda x: "" if x is None else str(x), parts)).encode()).hexdigest()
+    return hashlib.sha256(
+        "||".join(map(lambda x: "" if x is None else str(x), parts)).encode()
+    ).hexdigest()
 
 def fmt_amt(min_v, max_v):
     if min_v and max_v:
@@ -58,7 +58,9 @@ def fetch_quiver_web():
     r = requests.get(url, headers=UA, timeout=30)
     r.raise_for_status()
     html = r.text
-    m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.S)
+    m = re.search(
+        r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.S
+    )
     if not m:
         return []
     try:
@@ -90,16 +92,23 @@ def fetch_capitol_trades():
     r = requests.get(url, headers=UA, timeout=30)
     r.raise_for_status()
     html = r.text
-    rows = re.findall(r'data-ticker="([A-Z.\-]+)".*?data-transaction="(Buy|Sell)".*?data-politician="([^"]+)".*?data-date="([^"]+)"', html, re.S)
+    rows = re.findall(
+        r'data-ticker="([A-Z.\-]+)".*?data-transaction="(Buy|Sell)".*?data-politician="([^"]+)".*?data-date="([^"]+)"',
+        html, re.S
+    )
     results = []
     for ticker, side, pol, date in rows[:50]:
         uid = mk_id("CapitolTrades", pol, ticker, side, date)
-        results.append({"uid":uid,"source":"CapitolTrades","politician":pol,"ticker":ticker.upper(),
-                        "side":side.upper(),"date":date,"amount_min":None,"amount_max":None})
+        results.append({
+            "uid":uid,"source":"CapitolTrades","politician":pol,"ticker":ticker.upper(),
+            "side":side.upper(),"date":date,"amount_min":None,"amount_max":None
+        })
     return results
 
 def main():
     print("Sav Politician Watcher started.")
+    send_telegram("✅ Bot is alive and running on Railway!")  # <--- Startup ping
+    
     seen = load_seen()
     while True:
         try:
